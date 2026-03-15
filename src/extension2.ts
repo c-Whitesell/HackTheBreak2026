@@ -68,11 +68,4 @@ export function activate2(context: vscode.ExtensionContext) {
   }
 }
 
-// function playSound(context: vscode.ExtensionContext, file: string) {
-//   const filePath = path.join(context.extensionPath, 'media', file);
-//   soundPlay.play(filePath).catch((err: any) => {
-//     console.error("Failed to play sound:", err);
-//   });
-// }
-
 export function deactivate() {}
