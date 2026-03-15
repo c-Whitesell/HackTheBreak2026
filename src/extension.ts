@@ -33,7 +33,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (stickyInterval) clearInterval(stickyInterval);
         if (currentInset) { currentInset.dispose(); currentInset = undefined; }
 
-        lastLine = editor.visibleRanges[0].start.line;
+        lastLine = editor.visibleRanges[0].start.line+1;
         createInset(lastLine);
 
         stickyInterval = setInterval(() => {
@@ -117,6 +117,7 @@ function getStickyHTML(code: string, expanded: boolean) {
     const safeCode = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const display = expanded ? 'block' : 'none';
     const btnText = expanded ? '[ - ] Collapse' : '[ + ] Expand';
+    const pinText = safeCode.split("\n")[0];
 
     return `<!DOCTYPE html><html>
     <head><style>
@@ -152,7 +153,7 @@ function getStickyHTML(code: string, expanded: boolean) {
     </style></head>
     <body>
         <div id="bar">
-            <span>📌 Pinned Snippet</span>
+            <span>📌 ${pinText}</span>
             <span id="btn">${btnText}</span>
         </div>
         <pre id="codeBox"><code>${safeCode}</code></pre>
