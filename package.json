@@ -6,11 +6,16 @@
   "engines": {
     "vscode": "^1.95.0"
   },
-  "categories": ["Other"],
-  "activationEvents": ["onStartupFinished"],
-  "enabledApiProposals": ["editorInsets"],
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "enabledApiProposals": [
+    "editorInsets"
+  ],
   "main": "./out/extension.js",
-  
   "contributes": {
     "commands": [
       {
