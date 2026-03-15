@@ -1,29 +1,33 @@
 {
   "name": "helloworld",
   "displayName": "HelloWorld",
-  "description": "",
+  "description": "Sticky Pinned Functions for Hackathon",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.110.0"
+    "vscode": "^1.95.0"
   },
-  "categories": [
-    "Other"
-  ],
-  "activationEvents": [
-    "*"
-  ],
+  "categories": ["Other"],
+  "activationEvents": ["*"],
+  "enabledApiProposals": ["editorInsets"],
   "main": "./out/extension.js",
+  
   "contributes": {
     "commands": [
       {
-        "command": "helloworld.helloWorld",
-        "title": "Hello World"
-      },
-      {
-        "command": "second.second",
-        "title": "second"
+        "command": "pin.function",
+        "title": "Pin Function",
+        "icon": "$(pin)"
       }
-    ]
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "pin.function",
+          "group": "navigation",
+          "when": "editorTextFocus"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

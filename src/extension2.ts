@@ -7,7 +7,7 @@ let combo = 0;
 let initialized = false;
 let debounceTimer: NodeJS.Timeout | undefined;
 
-export function activate(context: vscode.ExtensionContext) {
+export function activate2(context: vscode.ExtensionContext) {
   vscode.commands.registerCommand('helloworld.testSound', () => {
     const filePath = path.join(context.extensionPath, 'media', 'error.wav');
     console.log("Trying to play:", filePath);
@@ -56,15 +56,21 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       previousErrors = currentErrors;
-    }, 500);
+    }, 1500);
   });
-}
-
-function playSound(context: vscode.ExtensionContext, file: string) {
+  function playSound(context: vscode.ExtensionContext, file: string) {
   const filePath = path.join(context.extensionPath, 'media', file);
   soundPlay.play(filePath).catch((err: any) => {
     console.error("Failed to play sound:", err);
   });
 }
+}
+
+// function playSound(context: vscode.ExtensionContext, file: string) {
+//   const filePath = path.join(context.extensionPath, 'media', file);
+//   soundPlay.play(filePath).catch((err: any) => {
+//     console.error("Failed to play sound:", err);
+//   });
+// }
 
 export function deactivate() { }
