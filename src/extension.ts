@@ -1,34 +1,169 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-const secondFile = require('./extension2');
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
+let currentInset: any = undefined;
+let stickyInterval: NodeJS.Timeout | undefined;
+let lastLine = -1;
+let pinnedCode = '';
+let isExpanded = true;
+let isRecreating = false;
+
 export function activate(context: vscode.ExtensionContext) {
-  // Use the console to output diagnostic information (console.log) and errors (console.error)
-  // This line of code will only be executed once when your extension is activated
-  console.log('Congratulations, your extension "helloworld" is now active!');
+    const pinCommand = vscode.commands.registerCommand('pin.function', async () => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) return;
 
-  // The command has been defined in the package.json file
-  // Now provide the implementation of the command with registerCommand
-  // The commandId parameter must match the command field in package.json
-  const disposable = vscode.commands.registerCommand(
-    'helloworld.helloWorld',
-    () => {
-      // The code you place here will be executed every time your command is executed
-      // Display a message box to the user
-      vscode.window.showInformationMessage('Hello World from hackathon!');
-    },
-  );
+        const selection = editor.document.getText(editor.selection);
+        if (!selection) {
+            vscode.window.showWarningMessage("Highlight code to pin it!");
+            return;
+        }
 
-  let disposable2 = vscode.commands.registerCommand(
-    'second.second',
-    secondFile.secondCommand,
-  );
+        pinnedCode = selection;
+        isExpanded = true;
 
-  context.subscriptions.push(disposable, disposable2);
+        if (stickyInterval) clearInterval(stickyInterval);
+        if (currentInset) { currentInset.dispose(); currentInset = undefined; }
+
+        lastLine = editor.visibleRanges[0].start.line;
+        createInset(lastLine);
+
+        stickyInterval = setInterval(() => {
+            if (isRecreating) return;
+            const activeEditor = vscode.window.activeTextEditor;
+            if (!activeEditor || !pinnedCode) return;
+
+            const currentLine = activeEditor.visibleRanges[0]?.start.line ?? 0;
+
+            // Recreate if line changed OR if inset was disposed by VS Code
+            if (currentLine !== lastLine || !currentInset || currentInset.webview === undefined) {
+                lastLine = currentLine;
+                createInset(currentLine);
+            }
+        }, 16);
+    });
+
+    const unpinCommand = vscode.commands.registerCommand('pin.unpinAll', () => {
+        if (stickyInterval) { clearInterval(stickyInterval); stickyInterval = undefined; }
+        if (currentInset) { currentInset.dispose(); currentInset = undefined; }
+        pinnedCode = '';
+        lastLine = -1;
+        isExpanded = true;
+    });
+
+    context.subscriptions.push(pinCommand, unpinCommand);
 }
 
-// This method is called when your extension is deactivated
-export function deactivate() {}
+function createInset(line: number) {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || !pinnedCode) return;
+
+    isRecreating = true;
+    if (currentInset) {
+        try { currentInset.dispose(); } catch (_) {}
+        currentInset = undefined;
+    }
+
+    if (!(vscode.window as any).createWebviewTextEditorInset) {
+        vscode.window.showErrorMessage("EditorInset API not available.");
+        isRecreating = false;
+        return;
+    }
+
+    const codeLines = pinnedCode.split('\n').length;
+    const height = isExpanded ? codeLines + 3 : 2;
+
+    try {
+        currentInset = (vscode.window as any).createWebviewTextEditorInset(
+            editor, line -1, height, { enableScripts: true }
+        );
+    } catch (e) {
+        isRecreating = false;
+        return;
+    }
+
+    // Pass isExpanded into the HTML so webview always knows its own state
+    currentInset.webview.html = getStickyHTML(pinnedCode, isExpanded);
+
+    const capturedInset = currentInset;
+    capturedInset.webview.onDidReceiveMessage((msg: any) => {
+        // Ignore messages from stale insets
+        if (capturedInset !== currentInset) return;
+
+        const newExpanded = msg.command === 'expand';
+        if (newExpanded === isExpanded) return; // no change, ignore
+
+        isExpanded = newExpanded;
+        isRecreating = true;
+        if (currentInset) {
+            try { currentInset.dispose(); } catch (_) {}
+            currentInset = undefined;
+        }
+        createInset(lastLine);
+    });
+
+    setTimeout(() => { isRecreating = false; }, 300);
+}
+
+function getStickyHTML(code: string, expanded: boolean) {
+    const safeCode = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const display = expanded ? 'block' : 'none';
+    const btnText = expanded ? '[ - ] Collapse' : '[ + ] Expand';
+
+    return `<!DOCTYPE html><html>
+    <head><style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: var(--vscode-editor-lineHighlightBackground);
+            border-bottom: 1px solid var(--vscode-focusBorder);
+            font-family: sans-serif;
+            overflow: hidden;
+        }
+        #bar {
+            cursor: pointer;
+            padding: 4px 10px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--vscode-editorGroupHeader-tabsBackground);
+            color: var(--vscode-editor-foreground);
+            user-select: none;
+        }
+        #bar:hover { background: var(--vscode-list-hoverBackground); }
+        #codeBox {
+            display: ${display};
+            padding: 8px 12px;
+            background: var(--vscode-editor-background);
+            font-family: var(--vscode-editor-font-family);
+            font-size: 12px;
+            overflow: auto;
+            white-space: pre;
+            color: var(--vscode-editor-foreground);
+        }
+    </style></head>
+    <body>
+        <div id="bar">
+            <span>📌 Pinned Snippet</span>
+            <span id="btn">${btnText}</span>
+        </div>
+        <pre id="codeBox"><code>${safeCode}</code></pre>
+        <script>
+            const vscode = acquireVsCodeApi();
+
+            // Restore state so clicking always works regardless of recreate
+            let expanded = ${expanded};
+
+            document.getElementById('bar').onclick = () => {
+                expanded = !expanded;
+                document.getElementById('codeBox').style.display = expanded ? 'block' : 'none';
+                document.getElementById('btn').innerText = expanded ? '[ - ] Collapse' : '[ + ] Expand';
+                vscode.postMessage({ command: expanded ? 'expand' : 'collapse' });
+            };
+        </script>
+    </body></html>`;
+}
+
+export function deactivate() {
+    if (stickyInterval) clearInterval(stickyInterval);
+    if (currentInset) currentInset.dispose();
+}

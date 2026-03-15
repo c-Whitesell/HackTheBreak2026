@@ -1,27 +1,33 @@
 {
   "name": "helloworld",
   "displayName": "HelloWorld",
-  "description": "",
+  "description": "Sticky Pinned Functions for Hackathon",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.110.0"
+    "vscode": "^1.95.0"
   },
-  "categories": [
-    "Other"
-  ],
-  "activationEvents": [],
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "enabledApiProposals": ["editorInsets"],
   "main": "./out/extension.js",
+  
   "contributes": {
     "commands": [
       {
-        "command": "helloworld.helloWorld",
-        "title": "Hello World"
-      },
-      {
-        "command": "second.second",
-        "title": "second"
+        "command": "pin.function",
+        "title": "Pin Function",
+        "icon": "$(pin)"
       }
-    ]
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "pin.function",
+          "group": "navigation",
+          "when": "editorTextFocus"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -32,12 +38,12 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.110.0",
+    "@types/vscode": "^1.95.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
-    "typescript-eslint": "^8.56.1",
+    "typescript-eslint": "^8.16.0",
     "eslint": "^9.39.3",
-    "typescript": "^5.9.3",
+    "typescript": "^5.7.3",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2"
   }
