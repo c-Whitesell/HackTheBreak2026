@@ -10,13 +10,14 @@ let debounceTimer: NodeJS.Timeout | undefined;
 export function activate2(context: vscode.ExtensionContext) {
   vscode.commands.registerCommand('helloworld.testSound', () => {
     const filePath = path.join(context.extensionPath, 'media', 'error.wav');
-    console.log("Trying to play:", filePath);
-    soundPlay.play(filePath)
-      .then(() => console.log("Sound played successfully"))
-      .catch((err: any) => console.error("Sound failed:", err));
+    console.log('Trying to play:', filePath);
+    soundPlay
+      .play(filePath)
+      .then(() => console.log('Sound played successfully'))
+      .catch((err: any) => console.error('Sound failed:', err));
   });
-  vscode.window.showInformationMessage("Sound Effects Extension loaded!");
-  console.log("Extension activated");
+  vscode.window.showInformationMessage('Sound Effects Extension loaded!');
+  console.log('Extension activated');
 
   vscode.languages.onDidChangeDiagnostics(() => {
     if (debounceTimer) clearTimeout(debounceTimer);
@@ -39,20 +40,20 @@ export function activate2(context: vscode.ExtensionContext) {
       }
 
       if (currentErrors > previousErrors) {
-        playSound(context, "error.wav");
+        playSound(context, 'error.wav');
         combo = 0;
-        vscode.window.showInformationMessage("Error detected!");
+        vscode.window.showInformationMessage('Error detected!');
       }
 
       if (currentErrors < previousErrors) {
-        combo += (previousErrors - currentErrors);
-        if (combo >= 3 ) {
-          combo = 0;
-          playSound(context, "combo.mp3");
+        combo += previousErrors - currentErrors;
+        if (combo >= 3) {
+          playSound(context, 'combo.mp3');
           vscode.window.showInformationMessage(`🔥 Combo x${combo}!`);
+          combo = 0;
         } else {
-          playSound(context, "fix.mp3");
-          vscode.window.showInformationMessage("Error fixed!");
+          playSound(context, 'fix.mp3');
+          vscode.window.showInformationMessage('Error fixed!');
         }
       }
 
@@ -60,11 +61,11 @@ export function activate2(context: vscode.ExtensionContext) {
     }, 1500);
   });
   function playSound(context: vscode.ExtensionContext, file: string) {
-  const filePath = path.join(context.extensionPath, 'media', file);
-  soundPlay.play(filePath).catch((err: any) => {
-    console.error("Failed to play sound:", err);
-  });
-}
+    const filePath = path.join(context.extensionPath, 'media', file);
+    soundPlay.play(filePath).catch((err: any) => {
+      console.error('Failed to play sound:', err);
+    });
+  }
 }
 
 // function playSound(context: vscode.ExtensionContext, file: string) {
@@ -74,4 +75,4 @@ export function activate2(context: vscode.ExtensionContext) {
 //   });
 // }
 
-export function deactivate() { }
+export function deactivate() {}

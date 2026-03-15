@@ -4,13 +4,18 @@
   "description": "Sticky Pinned Functions for Hackathon",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.95.0"
+    "vscode": "^1.110.0"
   },
-  "categories": ["Other"],
-  "activationEvents": ["*"],
-  "enabledApiProposals": ["editorInsets"],
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "*"
+  ],
+  "enabledApiProposals": [
+    "editorInsets"
+  ],
   "main": "./out/extension.js",
-  
   "contributes": {
     "commands": [
       {
@@ -18,7 +23,7 @@
         "title": "Pin Code Snippet",
         "icon": "$(pin)"
       },
-         {
+      {
         "command": "pin.unpinAll",
         "title": "Unpin Code Snippet",
         "icon": "$(pin)"
