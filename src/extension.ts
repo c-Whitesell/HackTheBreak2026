@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import {activate2 as activateSecond} from './extension2';
+import { activate2 as activateSecond } from './extension2';
 import * as path from 'path';
 const soundPlay = require('sound-play');
 
@@ -16,110 +16,133 @@ let isExpanded = true;
 let isRecreating = false;
 
 export function activate(context: vscode.ExtensionContext) {
-  activateSecond(context); 
-    const pinCommand = vscode.commands.registerCommand('pin.function', async () => {
-        const editor = vscode.window.activeTextEditor;
-        if (!editor) return;
+  activateSecond(context);
+  const pinCommand = vscode.commands.registerCommand(
+    'pin.function',
+    async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) return;
 
-        const selection = editor.document.getText(editor.selection);
-        if (!selection) {
-            vscode.window.showWarningMessage("Highlight code to pin it!");
-            return;
+      const selection = editor.document.getText(editor.selection);
+      if (!selection) {
+        vscode.window.showWarningMessage('Highlight code to pin it!');
+        return;
+      }
+
+      pinnedCode = selection;
+      isExpanded = true;
+
+      if (stickyInterval) clearInterval(stickyInterval);
+      if (currentInset) {
+        currentInset.dispose();
+        currentInset = undefined;
+      }
+
+      lastLine = editor.visibleRanges[0].start.line + 1;
+      createInset(lastLine);
+
+      stickyInterval = setInterval(() => {
+        if (isRecreating) return;
+        const activeEditor = vscode.window.activeTextEditor;
+        if (!activeEditor || !pinnedCode) return;
+
+        const currentLine = activeEditor.visibleRanges[0]?.start.line ?? 0;
+
+        // Recreate if line changed OR if inset was disposed by VS Code
+        if (
+          currentLine !== lastLine ||
+          !currentInset ||
+          currentInset.webview === undefined
+        ) {
+          lastLine = currentLine;
+          createInset(currentLine);
         }
+      }, 16);
+    },
+  );
 
-        pinnedCode = selection;
-        isExpanded = true;
+  const unpinCommand = vscode.commands.registerCommand('pin.unpinAll', () => {
+    if (stickyInterval) {
+      clearInterval(stickyInterval);
+      stickyInterval = undefined;
+    }
+    if (currentInset) {
+      currentInset.dispose();
+      currentInset = undefined;
+    }
+    pinnedCode = '';
+    lastLine = -1;
+    isExpanded = true;
+  });
 
-        if (stickyInterval) clearInterval(stickyInterval);
-        if (currentInset) { currentInset.dispose(); currentInset = undefined; }
-
-        lastLine = editor.visibleRanges[0].start.line+1;
-        createInset(lastLine);
-
-        stickyInterval = setInterval(() => {
-            if (isRecreating) return;
-            const activeEditor = vscode.window.activeTextEditor;
-            if (!activeEditor || !pinnedCode) return;
-
-            const currentLine = activeEditor.visibleRanges[0]?.start.line ?? 0;
-
-            // Recreate if line changed OR if inset was disposed by VS Code
-            if (currentLine !== lastLine || !currentInset || currentInset.webview === undefined) {
-                lastLine = currentLine;
-                createInset(currentLine);
-            }
-        }, 16);
-    });
-
-    const unpinCommand = vscode.commands.registerCommand('pin.unpinAll', () => {
-        if (stickyInterval) { clearInterval(stickyInterval); stickyInterval = undefined; }
-        if (currentInset) { currentInset.dispose(); currentInset = undefined; }
-        pinnedCode = '';
-        lastLine = -1;
-        isExpanded = true;
-    });
-
-    context.subscriptions.push(pinCommand, unpinCommand);
+  context.subscriptions.push(pinCommand, unpinCommand);
 }
 
 function createInset(line: number) {
-    const editor = vscode.window.activeTextEditor;
-    if (!editor || !pinnedCode) return;
+  const editor = vscode.window.activeTextEditor;
+  if (!editor || !pinnedCode) return;
 
+  isRecreating = true;
+  if (currentInset) {
+    try {
+      currentInset.dispose();
+    } catch (_) {}
+    currentInset = undefined;
+  }
+
+  if (!(vscode.window as any).createWebviewTextEditorInset) {
+    vscode.window.showErrorMessage('EditorInset API not available.');
+    isRecreating = false;
+    return;
+  }
+
+  const codeLines = pinnedCode.split('\n').length;
+  const height = isExpanded ? codeLines + 3 : 2;
+
+  try {
+    currentInset = (vscode.window as any).createWebviewTextEditorInset(
+      editor,
+      line - 1,
+      height,
+      { enableScripts: true },
+    );
+  } catch (e) {
+    isRecreating = false;
+    return;
+  }
+
+  currentInset.webview.html = getStickyHTML(pinnedCode, isExpanded);
+
+  const capturedInset = currentInset;
+  capturedInset.webview.onDidReceiveMessage((msg: any) => {
+    if (capturedInset !== currentInset) return;
+
+    const newExpanded = msg.command === 'expand';
+    if (newExpanded === isExpanded) return;
+
+    isExpanded = newExpanded;
     isRecreating = true;
     if (currentInset) {
-        try { currentInset.dispose(); } catch (_) {}
-        currentInset = undefined;
+      try {
+        currentInset.dispose();
+      } catch (_) {}
+      currentInset = undefined;
     }
+    createInset(lastLine);
+  });
 
-    if (!(vscode.window as any).createWebviewTextEditorInset) {
-        vscode.window.showErrorMessage("EditorInset API not available.");
-        isRecreating = false;
-        return;
-    }
-
-    const codeLines = pinnedCode.split('\n').length;
-    const height = isExpanded ? codeLines + 3 : 2;
-
-    try {
-        currentInset = (vscode.window as any).createWebviewTextEditorInset(
-            editor, line -1, height, { enableScripts: true }
-        );
-    } catch (e) {
-        isRecreating = false;
-        return;
-    }
-
-    // Pass isExpanded into the HTML so webview always knows its own state
-    currentInset.webview.html = getStickyHTML(pinnedCode, isExpanded);
-
-    const capturedInset = currentInset;
-    capturedInset.webview.onDidReceiveMessage((msg: any) => {
-        // Ignore messages from stale insets
-        if (capturedInset !== currentInset) return;
-
-        const newExpanded = msg.command === 'expand';
-        if (newExpanded === isExpanded) return; // no change, ignore
-
-        isExpanded = newExpanded;
-        isRecreating = true;
-        if (currentInset) {
-            try { currentInset.dispose(); } catch (_) {}
-            currentInset = undefined;
-        }
-        createInset(lastLine);
-    });
-
-    setTimeout(() => { isRecreating = false; }, 300);
+  setTimeout(() => {
+    isRecreating = false;
+  }, 300);
 }
 
 function getStickyHTML(code: string, expanded: boolean) {
-    const safeCode = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    const display = expanded ? 'block' : 'none';
-    const btnText = expanded ? '[ - ] Collapse' : '[ + ] Expand';
-    const pinText = safeCode.split("\n")[0];
+  const safeCode = code.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const display = expanded ? 'block' : 'none';
+  const btnText = expanded ? '[ - ] Collapse' : '[ + ] Expand';
+  const pinText = safeCode.split('\n')[0];
 
-    return `<!DOCTYPE html><html>
+  return `<!DOCTYPE html><html>
     <head><style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -173,10 +196,7 @@ function getStickyHTML(code: string, expanded: boolean) {
     </body></html>`;
 }
 
-
-    
-
 export function deactivate() {
-    if (stickyInterval) clearInterval(stickyInterval);
-    if (currentInset) currentInset.dispose();
+  if (stickyInterval) clearInterval(stickyInterval);
+  if (currentInset) currentInset.dispose();
 }
