@@ -1,4 +1,12 @@
 import * as vscode from 'vscode';
+import {activate2 as activateSecond} from './extension2';
+import * as path from 'path';
+const soundPlay = require('sound-play');
+
+let previousErrors = 0;
+let combo = 0;
+let initialized = false;
+let debounceTimer: NodeJS.Timeout | undefined;
 
 let currentInset: any = undefined;
 let stickyInterval: NodeJS.Timeout | undefined;
@@ -8,6 +16,7 @@ let isExpanded = true;
 let isRecreating = false;
 
 export function activate(context: vscode.ExtensionContext) {
+  activateSecond(context); 
     const pinCommand = vscode.commands.registerCommand('pin.function', async () => {
         const editor = vscode.window.activeTextEditor;
         if (!editor) return;
@@ -163,6 +172,9 @@ function getStickyHTML(code: string, expanded: boolean) {
         </script>
     </body></html>`;
 }
+
+
+    
 
 export function deactivate() {
     if (stickyInterval) clearInterval(stickyInterval);
