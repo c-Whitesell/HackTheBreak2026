@@ -48,7 +48,6 @@ export function activate(context: vscode.ExtensionContext) {
 
         const currentLine = activeEditor.visibleRanges[0]?.start.line ?? 0;
 
-        // Recreate if line changed OR if inset was disposed by VS Code
         if (
           currentLine !== lastLine ||
           !currentInset ||
