@@ -4,13 +4,13 @@
   "description": "Sticky Pinned Functions for Hackathon",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.95.0"
+    "vscode": "^1.110.0"
   },
   "categories": [
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "*"
   ],
   "enabledApiProposals": [
     "editorInsets"
@@ -20,7 +20,12 @@
     "commands": [
       {
         "command": "pin.function",
-        "title": "Pin Function",
+        "title": "Pin Code Snippet",
+        "icon": "$(pin)"
+      },
+      {
+        "command": "pin.unpinAll",
+        "title": "Unpin Code Snippet",
         "icon": "$(pin)"
       }
     ],
@@ -28,6 +33,11 @@
       "editor/context": [
         {
           "command": "pin.function",
+          "group": "navigation",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "pin.unpinAll",
           "group": "navigation",
           "when": "editorTextFocus"
         }
@@ -43,13 +53,16 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.95.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
-    "typescript-eslint": "^8.16.0",
-    "eslint": "^9.39.3",
-    "typescript": "^5.7.3",
+    "@types/vscode": "^1.110.0",
     "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2"
+    "@vscode/test-electron": "^2.5.2",
+    "eslint": "^9.39.3",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.1"
+  },
+  "dependencies": {
+    "sound-play": "^1.1.0"
   }
 }

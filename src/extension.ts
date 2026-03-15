@@ -1,4 +1,12 @@
 import * as vscode from 'vscode';
+import {activate2 as activateSecond} from './extension2';
+import * as path from 'path';
+const soundPlay = require('sound-play');
+
+let previousErrors = 0;
+let combo = 0;
+let initialized = false;
+let debounceTimer: NodeJS.Timeout | undefined;
 
 let currentInset: any = undefined;
 let stickyInterval: NodeJS.Timeout | undefined;
@@ -8,6 +16,7 @@ let isExpanded = true;
 let isRecreating = false;
 
 export function activate(context: vscode.ExtensionContext) {
+  activateSecond(context); 
     const pinCommand = vscode.commands.registerCommand('pin.function', async () => {
         const editor = vscode.window.activeTextEditor;
         if (!editor) return;
@@ -24,7 +33,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (stickyInterval) clearInterval(stickyInterval);
         if (currentInset) { currentInset.dispose(); currentInset = undefined; }
 
-        lastLine = editor.visibleRanges[0].start.line;
+        lastLine = editor.visibleRanges[0].start.line+1;
         createInset(lastLine);
 
         stickyInterval = setInterval(() => {
@@ -108,6 +117,7 @@ function getStickyHTML(code: string, expanded: boolean) {
     const safeCode = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const display = expanded ? 'block' : 'none';
     const btnText = expanded ? '[ - ] Collapse' : '[ + ] Expand';
+    const pinText = safeCode.split("\n")[0];
 
     return `<!DOCTYPE html><html>
     <head><style>
@@ -143,7 +153,7 @@ function getStickyHTML(code: string, expanded: boolean) {
     </style></head>
     <body>
         <div id="bar">
-            <span>📌 Pinned Snippet</span>
+            <span>📌 ${pinText}</span>
             <span id="btn">${btnText}</span>
         </div>
         <pre id="codeBox"><code>${safeCode}</code></pre>
@@ -162,6 +172,9 @@ function getStickyHTML(code: string, expanded: boolean) {
         </script>
     </body></html>`;
 }
+
+
+    
 
 export function deactivate() {
     if (stickyInterval) clearInterval(stickyInterval);
