@@ -45,8 +45,9 @@ export function activate2(context: vscode.ExtensionContext) {
       }
 
       if (currentErrors < previousErrors) {
-        combo++;
-        if (combo % 3 === 0) {
+        combo += (previousErrors - currentErrors);
+        if (combo >= 3 ) {
+          combo = 0;
           playSound(context, "combo.mp3");
           vscode.window.showInformationMessage(`🔥 Combo x${combo}!`);
         } else {
